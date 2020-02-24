@@ -11,14 +11,15 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdarg.h>
-#include <omp.h>
-#include <pthread.h>
+#include <mpi.h>
 #include <unistd.h>
 
 #ifdef __linux__
+
 #define      __stderrp stderr
 #define      __stdoutp stdout
 #define      __stdinp  stdin
+
 #define      uint16_t  u_int16_t
 #endif
 
