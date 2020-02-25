@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include <stdarg.h>
 #include <mpi.h>
 #include <unistd.h>
