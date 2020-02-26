@@ -53,35 +53,30 @@ int main(int argc, char const *argv[])
         MPI_Bcast(B[i], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
     }
 
-    // Serial Multiplication in RANK 0
-    if(rank == 0) {
-        // Calculating C serially
-        multiply_serial(A, B, C_S, N);
-    }
-    // Otherwise segmented multiplication
-    else {
-        // Calculating boundaries
-        int start = (N*(rank-1))/(size-1), end = (N*(rank))/(size-1);
-        // Multiplying the respective sections
-        for(int i=start; i<end; i++) {
-            C[i] = (float *)malloc(sizeof(float)*N);
-            for(int j=0; j<N; j++) {
-                C[i][j] = 0;
-                for(int k=0; k<32; k++)
-                    C[i][j] += A[k][i]*B[k][j];
-            }
+
+    // Calculating boundaries
+    int start = (N*rank)/size, end = (N*(rank+1))/size;
+    // Multiplying the respective sections
+    for(int i=start; i<end; i++) {
+        C[i] = (float *)malloc(sizeof(float)*N);
+        for(int j=0; j<N; j++) {
+            C[i][j] = 0;
+            for(int k=0; k<32; k++)
+                C[i][j] += A[k][i]*B[k][j];
         }
     }
 
     // Broadcasting multiplied value, from all ranks to rank 0
-    for(int p=1; p<size; p++) {
-        int start = (N*(p-1))/(size-1), end = (N*(p))/(size-1);
+    for(int p=0; p<size; p++) {
+        int start = (N*p)/size, end = (N*(p+1))/size;
         for(int i=start; i<end; i++) 
             MPI_Bcast(C[i], N, MPI_FLOAT, p, MPI_COMM_WORLD);
     }
 
     // Comparing in rank = 0
     if(rank == 0) {
+        // Calculating C serially
+        multiply_serial(A, B, C_S, N);
         // Checking if both are equal
         fprintf(__stdoutp, "Equal: %d\n", equal_matrix(C_S, C, N));
     }

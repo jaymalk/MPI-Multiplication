@@ -43,34 +43,37 @@ int main(int argc, char const *argv[])
 
         // Initialising C and C_S
         C = (float **)malloc(sizeof(float *) * N);
-        C_S = (float **)malloc(sizeof(float *) * N);
-        for(int i=0; i<N; i++) {
+        for(int i=0; i<N; i++)
             C[i] = (float *)malloc(sizeof(float) * N);
-            C_S[i] = (float *)malloc(sizeof(float) * N);
-        }
 
-        // Calculating C serially
-        multiply_serial(A, B, C_S, N);
+        // Calculating boundaries
+        int start = 0, end = N/size;
+
+        // Multiplying the respective sections
+        for(int i=start; i<end; i++) {
+            for(int j=0; j<N; j++) {
+                C[i-start][j] = 0;
+                for(int k=0; k<32; k++)
+                    C[i-start][j] += A[k][i]*B[k][j];
+            }
+        }
 
         // Waiting that all the data has been sent
         MPI_Waitall(64*(size-1), send_req, MPI_STATUS_IGNORE);
 
         // request values for sending
-        MPI_Request recv_req[N];
+        MPI_Request recv_req[N - N/size];
         req_index = 0;
 
-        // Getting C from other values
+        // Getting C from other ranks
         for(int p=1; p<size; p++) {
-            int start = (N*(p-1))/(size-1), end = (N*(p))/(size-1);
+            int start = (N*p)/(size), end = (N*(p+1))/(size);
             for(int i=start; i<end; i++) 
                 MPI_Irecv(C[i], N, MPI_FLOAT, p, 0, MPI_COMM_WORLD, &recv_req[req_index++]);
         }
 
         // Waiting that all the data has been sent
-        MPI_Waitall(N, recv_req, MPI_STATUS_IGNORE);
-
-        // Checking if both are equal
-        fprintf(__stdoutp, "Equal: %d\n", equal_matrix(C_S, C, N));
+        MPI_Waitall(req_index, recv_req, MPI_STATUS_IGNORE);
     }
     // Other processes (id != 0)
     else {
@@ -88,7 +91,7 @@ int main(int argc, char const *argv[])
         }
 
         // Calculating boundaries
-        int start = (N*(rank-1))/(size-1), end = (N*(rank))/(size-1);
+        int start = (N*(rank))/(size), end = (N*(rank+1))/(size);
 
         // Initialising the respective matrix
         C = (float **)malloc(sizeof(float *) * (end-start));
@@ -120,5 +123,18 @@ int main(int argc, char const *argv[])
 
     // Ending MPI pieline
     MPI_Finalize();
+
+    // Multiplying serial and checking with the result produced, only in RANK:0
+    if(rank == 0) {
+        // Initialising C_S
+        C_S = (float **)malloc(sizeof(float *) * N);
+        for(int i=0; i<N; i++)
+            C_S[i] = (float *)malloc(sizeof(float) * N);
+        // Multiplying
+        multiply_serial(A, B, C_S, N);
+        // Checking if both are equal
+        fprintf(__stdoutp, "Equal: %d\n", equal_matrix(C_S, C, N));
+    }
+
     return 0;
 }
