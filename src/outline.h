@@ -7,6 +7,10 @@
 #include "include.h"
 
 
+// For measuring time
+struct timespec start_time, end_time;
+
+
 /*
  * Comparing two matrices and checking equality.
  * @param A, B: Matrices (Must be of the same order)

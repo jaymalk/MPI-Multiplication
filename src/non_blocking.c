@@ -7,12 +7,15 @@
 int main(int argc, char const *argv[])
 {
     // Matrix order
-    int N = 4000;
+    int N = 8000;
 
     // rank and size
     int rank, size;
     // matrix containers
     float *A[32], *B[32], **C, **C_S;
+
+    // Starting timer
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start_time);
 
     // Starting MPI pipeline
     MPI_Init(NULL, NULL);
@@ -121,8 +124,17 @@ int main(int argc, char const *argv[])
         MPI_Waitall(end-start, send_req, MPI_STATUS_IGNORE);
     }
 
+    // Ending timer
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end_time);
+
     // Ending MPI pieline
     MPI_Finalize();
+
+    // Parallel time
+    double parallel_time = (end_time.tv_sec - start_time.tv_sec) + (end_time.tv_nsec - start_time.tv_nsec) * 1e-9;
+
+    // Starting timer
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start_time);
 
     // Multiplying serial and checking with the result produced, only in RANK:0
     if(rank == 0) {
@@ -135,6 +147,16 @@ int main(int argc, char const *argv[])
         // Checking if both are equal
         fprintf(__stdoutp, "Equal: %d\n", equal_matrix(C_S, C, N));
     }
+
+    // Ending timer
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end_time);
+
+    // Serial time
+    double serial_time = (end_time.tv_sec - start_time.tv_sec) + (end_time.tv_nsec - start_time.tv_nsec) * 1e-9;
+
+    // Print out times
+    if(rank == 0)
+        fprintf(__stdoutp, "Parallel Time: %lf\nSerial Time: %lf\n", parallel_time, serial_time);
 
     return 0;
 }
